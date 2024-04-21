@@ -9,10 +9,14 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@clerk/nextjs": "^5.0.1",
+    "@clerk/themes": "^2.0.0",
     "next": "14.2.2",
     "next-auth": "^4.24.7",
+    "openai": "^4.38.2",
     "react": "^18",
-    "react-dom": "^18"
+    "react-dom": "^18",
+    "redis": "^4.6.13"
   },
   "devDependencies": {
     "daisyui": "^4.10.2",
