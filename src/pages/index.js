@@ -7,6 +7,7 @@ export default function Home({ setTheme }) {
 
   return (
     <>
+
       <div className="hero min-h-screen bg-base-200">
         <div className="hero-content flex-col lg:flex-row">
           <div className="text-center lg:text-left">
@@ -41,4 +42,5 @@ export default function Home({ setTheme }) {
     </>
   );
 }
+
 
