@@ -2,6 +2,10 @@ import { useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/router';
 import { useEffect, useState, useRef } from 'react';
 import Navbar from '../components/Navbar';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
+
 
 // Custom hook for the typewriter effect
 const useTypewriter = (text, speed = 50) => {
@@ -39,6 +43,7 @@ export default function Dashboard() {
   const [messages, setMessages] = useState([]);
   const messagesEndRef = useRef(null);
   const [selectedServices, setSelectedServices] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleInputChange = (event) => {
     setValue(event.target.value);
@@ -73,6 +78,7 @@ export default function Dashboard() {
 
 
   const sendMessage = (content) => {
+    setIsLoading(true);
     const newMessage = {
       content,
       time: new Date().toLocaleTimeString(),
@@ -92,10 +98,56 @@ export default function Dashboard() {
   .then(response => response.json())
   .then(data => {
     receiveMessage(data.response);
+    setIsLoading(false);
   })
   .catch(error => { 
     console.error('Error:', error);
+    setIsLoading(false);
   });
+  };
+
+  const saveChanges = async () => {
+    // determine service names based of number
+    const serviceNames = {
+      1: 'Internet Service',
+      2: 'Cable TV',
+      3: 'Home Phone',
+      4: 'Mobile Service',
+      5: 'Home Security',
+      6: 'Business Solutions'
+    };
+    const selectedServiceNames = selectedServices.map(serviceId => serviceNames[serviceId]).join(', ');
+
+    try {
+      const response = await fetch('/api/save-changes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          user: user,
+          selectedServices: selectedServiceNames
+        })
+      });
+      if (!response.ok) {
+        throw new Error('Failed to save changes');
+      }
+      const result = await response.json();
+      toast.success('Your changes have been saved!', {
+        position: "bottom-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "dark"
+        });
+        
+      console.log('Save successful:', result);
+    } catch (error) {
+      console.error('Error saving changes:', error);
+    }
   };
 
   const receiveMessage = (content) => {
@@ -145,7 +197,7 @@ export default function Dashboard() {
           <h1 className='text-4xl'>Hello, <span className='font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-800 to-blue-500'>{user.firstName}</span>.</h1>
           <p className='text-2xl'>Get lightning fast support with our our AI assistant.</p>
 
-          <div className=' grid grid-cols-4 mt-4 gap-x-4'>
+          <div className=' grid lg:grid-cols-3  md:grid-cols-3 sm:grid-cols-1 mt-4 gap-x-4'>
 
             <div className=" card  bg-base-300 shadow-xl hover:shadow-2xl hover:cursor-pointer " onClick={() => {
               //Added this name now it shows user name
@@ -225,13 +277,14 @@ setShowChat(true);
                 <div className="form-control">
                   <label className="label cursor-pointer">
                     <span className="label-text">{service.name}</span>
-                    <input type="checkbox" checked={selectedServices.includes(service.id)} className="checkbox checkbox-primary " />
+                    <input type="checkbox" checked={selectedServices.includes(service.id)} onChange={() => saveChanges()}  className="checkbox checkbox-primary " />
                   </label>
                 </div>
               </div>
               ))}
             </div>
             </div>
+            <ToastContainer />
 
             </div>
 
@@ -259,7 +312,7 @@ setShowChat(true);
                 )}
                 <div className="chat-header">
                  
-                  {message.type === 'received' ? 'Comcast Assistant' : 'You'}
+                  {message.type === 'received' ? 'Comcast Inquire' : 'You'}
                   <time className="text-xs opacity-50 ml-2">{message.time}</time>
                 </div>
                 <div className="chat-bubble">
@@ -278,6 +331,8 @@ setShowChat(true);
           </div>
 
           <div className="fixed bottom-10 left-0 right-0 p-4 max-w-7xl px-5 mx-auto ">
+
+              {isLoading ? <p className='mb-2' >Inquire is thinking...</p>  :  <p> </p>}
             <div className='flex'>
               <input
                 value={value}

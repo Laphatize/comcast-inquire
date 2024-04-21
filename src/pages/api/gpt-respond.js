@@ -26,17 +26,28 @@ export async function retrieveMessageHistory(userId) {
   return messages.map(message => JSON.parse(message));
 }
 
+// get the selected services from redis
+export async function retrieveSelectedServices(userId) {
+  const key = `selectedServices_${userId}`;
+  const selectedServices = await redisClient.get(key);
+  return selectedServices;
+}
+
 
 
 export default async function handler(req, res) {
 
-    console.log("hello!")
-    console.log(req.body.user.id);
-    console.log(retrieveMessageHistory(req.body.user.id));
+    let history = [];
+    if (await retrieveMessageHistory(req.body.user.id)) {
+     history = await retrieveMessageHistory(req.body.user.id);
+    }
 
-    let history = await retrieveMessageHistory(req.body.user.id);
+    let customerProducts = "";
+    if (await retrieveSelectedServices(req.body.user.id)) {
+        customerProducts = await retrieveSelectedServices(req.body.user.id);
+        console.log(" CUSTOMER PRODUCTS " + customerProducts)
+    }
 
-    console.log(" HISTORY LENGTH " + history.length)
 
     // if the history length is greater than 30, remove the  some of the oldest messages
     if (history.length > 30) {
@@ -49,11 +60,10 @@ export default async function handler(req, res) {
     }
 
     
+ 
 
 
-
-
-    let messages = [{ role: "system", content: `You are a customer support / sales agent for Comcast. Always provide a link to one of the following Comcast articles. Never given anything else! LIST OF JSON ARTICLES: [
+    let messages = [{ role: "system", content: `You are a customer support / sales agent for Comcast. The customer (${req.body.user.name}) has the following selected services: ${customerProducts}. Always provide a link to one of the following Comcast articles. Never given anything else! LIST OF JSON ARTICLES: [
         {"name": "General Xfinity Support", "link": "https://www.xfinity.com/support"},
         {"name": "Xfinity Contact Us", "link": "https://www.xfinity.com/support/contact-us"},
         {"name": "Internet Help and Support", "link": "https://www.xfinity.com/support/internet"},
@@ -169,7 +179,8 @@ export default async function handler(req, res) {
         {"name": "Email Error Troubleshooting", "link": "https://www.xfinity.com/support/articles/email-errors"},
         {"name": "Xfinity Home Support", "link": "https://www.xfinity.com/support/xfinity-home"},
         {"
-          END OF ARTICLES` }];
+          END OF ARTICLES
+          You are a customer support / sales agent for Comcast. The customer (${req.body.user.name}) (aka the person you are talking too) OWNS THE CURRENT COMCAST/XFINITY services: ${customerProducts}. Always provide a link to one of the following Comcast articles. Never given anything else! ` }];
 
     if (history && history.length > 0) {
         messages.push({ role: "system", content: `The following is the message history from the user: ${history.toString()}` });
@@ -177,7 +188,7 @@ export default async function handler(req, res) {
 
 
     // push new message
-    messages.push({ role: "user", content: req.body.message });
+    messages.push({ role: "user", content: req.body.message + `\n (Customer owns these ${customerProducts}, but don't bring it up unless asked.)` });
 
     const completion = await openai.chat.completions.create({
         messages: messages,
